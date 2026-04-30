@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reservas Hotel XML</title>
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; text-align: center; }
+        .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .full-width { grid-column: span 2; }
+        button { cursor: pointer; border: none; padding: 10px; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+        .btn-add { background: #3498db; color: white; }
+        .btn-add:hover { background: #2980b9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        th { background: #2c3e50; color: white; }
+        .btn-edit { background: #f1c40f; color: white; margin-right: 5px; }
+        .btn-delete { background: #e74c3c; color: white; }
+        .btn-pdf { background: #27ae60; color: white; margin-top: 20px; width: 100%; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Reservas Hotel</h2>
+    <div class="form-group">
+        <input type="text" id="cliente" placeholder="Nombre del Cliente">
+        <select id="tipo">
+            <option value="Individual">Individual</option>
+            <option value="Doble">Doble</option>
+            <option value="Suite">Suite</option>
+        </select>
+        <input type="date" id="entrada">
+        <input type="date" id="salida">
+        <select id="estado">
+            <option value="Confirmada">Confirmada</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Cancelada">Cancelada</option>
+        </select>
+        <input type="number" id="precio" placeholder="Precio de la reserva ($)">
+        <button class="btn-add full-width" onclick="procesarReserva()" id="btnGuardar">Agregar Reserva</button>
+    </div>
+
+    <table id="tablaReservas">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Tipo</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>Estado</th>
+                <th>Precio</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="cuerpoTabla"></tbody>
+    </table>
+
+    <button class="btn-pdf" onclick="exportarPDF()"> Exportar a PDF</button>
+</div>
+
+<script>
+    let reservas = [];
+    let editandoId = null;
+
+    function procesarReserva() {
+        const cliente = document.getElementById('cliente').value;
+        const tipo = document.getElementById('tipo').value;
+        const entrada = document.getElementById('entrada').value;
+        const salida = document.getElementById('salida').value;
+        const estado = document.getElementById('estado').value;
+        const precio = document.getElementById('precio').value;
+        if (!cliente || !entrada || !salida || !precio) {
+            alert(" Por favor, rellena todos los campos.");
+            return;
+        }
+
+        if (editandoId !== null) {
+            const index = reservas.findIndex(r => r.id === editandoId);
+            reservas[index] = { id: editandoId, cliente, tipo, entrada, salida, estado, precio };
+            editandoId = null;
+            document.getElementById('btnGuardar').innerText = "Agregar Reserva";
+        } else {
+            const nuevaReserva = {
+                id: Math.floor(Math.random() * 1000),
+                cliente, tipo, entrada, salida, estado, precio
+            };
+            reservas.push(nuevaReserva);
+        }
+
+        limpiarYActualizar();
+    }
+
+    function eliminarReserva(id) {
+        if(confirm("¿Deseas eliminar esta reserva?")) {
+            reservas = reservas.filter(r => r.id !== id);
+            limpiarYActualizar();
+        }
+    }
+
+    function editarReserva(id) {
+        const r = reservas.find(res => res.id === id);
+        document.getElementById('cliente').value = r.cliente;
+        document.getElementById('tipo').value = r.tipo;
+        document.getElementById('entrada').value = r.entrada;
+        document.getElementById('salida').value = r.salida;
+        document.getElementById('estado').value = r.estado;
+        document.getElementById('precio').value = r.precio;
+        
+        editandoId = id;
+        document.getElementById('btnGuardar').innerText = "Guardar Cambios";
+    }
+
+    function limpiarYActualizar() {
+        document.querySelectorAll('input').forEach(i => i.value = "");
+        const cuerpo = document.getElementById('cuerpoTabla');
+        cuerpo.innerHTML = "";
+
+        reservas.forEach(r => {
+            cuerpo.innerHTML += `
+                <tr>
+                    <td>#${r.id}</td>
+                    <td>${r.cliente}</td>
+                    <td>${r.tipo}</td>
+                    <td>${r.entrada}</td>
+                    <td>${r.salida}</td>
+                    <td>${r.estado}</td>
+                    <td>$${r.precio}</td>
+                    <td>
+                        <button class="btn-edit" onclick="editarReserva(${r.id})">Modificar</button>
+                        <button class="btn-delete" onclick="eliminarReserva(${r.id})">Eliminar</button>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    function exportarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("Reporte de Reservas de Hotel", 14, 15);
+        doc.autoTable({ html: '#tablaReservas', margin: { top: 25 }, excludeAtColumns: [7] });
+        doc.save('Reservas_Hotel.pdf');
+    }
+</script>
+
+</body>
+</html>
